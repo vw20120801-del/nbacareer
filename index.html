@@ -6,19 +6,39 @@
   <title>NBA My Career</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #0a0a0f; color: #fff; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      background: #0a0a0f;
+      color: #fff;
+      font-family: sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
     #root { min-height: 100vh; }
+    #loading {
+      position: fixed; inset: 0; background: #0a0a0f;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: sans-serif; color: #f9a01b;
+      font-size: 16px; letter-spacing: 2px; z-index: 9999;
+    }
+    #loading .ball { font-size: 48px; margin-bottom: 20px; animation: bounce 0.8s infinite alternate; }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-16px); } }
   </style>
 </head>
 <body>
+  <div id="loading">
+    <div class="ball">🏀</div>
+    NBA MY CAREER 加载中...
+  </div>
   <div id="root"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <!-- React UMD builds -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Sucrase: much faster JSX transform than Babel (~10x) -->
+  <script src="https://unpkg.com/sucrase@3.35.0/dist/browser/sucrase.js"></script>
 
-  <script type="text/babel">
-import { useState, useMemo, useEffect, useCallback } from "react";
+  <script id="game-code" type="text/plain">
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const POSITIONS = ["PG","SG","SF","PF","C"];
@@ -2160,9 +2180,34 @@ function App() {
   return null;
 }
 
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+  </script>
 
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(React.createElement(App));
+  <script>
+    // Destructure React hooks into global scope for the JSX code
+    const { useState, useMemo, useEffect, useCallback, useRef } = React;
+
+    try {
+      const src = document.getElementById('game-code').textContent;
+      const compiled = sucrase.transform(src, {
+        transforms: ['jsx'],
+        jsxPragma: 'React.createElement',
+        jsxFragmentPragma: 'React.Fragment',
+        production: true,
+      }).code;
+      
+      eval(compiled);
+      document.getElementById('loading').style.display = 'none';
+    } catch(err) {
+      document.getElementById('loading').innerHTML = 
+        '<div style="color:#ff6b6b;padding:20px;text-align:center">' +
+        '<div style="font-size:32px;margin-bottom:16px">⚠️</div>' +
+        '<div style="font-size:14px;margin-bottom:10px">加载出错了</div>' +
+        '<div style="font-size:11px;color:#888;word-break:break-all">' + 
+        err.message.substring(0, 200) + '</div></div>';
+      console.error('Game error:', err);
+    }
   </script>
 </body>
 </html>
